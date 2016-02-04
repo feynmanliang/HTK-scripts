@@ -72,17 +72,44 @@
 # Modify the alignment process so that system
 # combines the two word sequences and generates an output MLF. You will need
 # to be able to assign a confidence score to the !NULL hypothesis during combination.
-python3.4 align-mlf.py \
-  plp-bg/dev03_DEV001-20010117-XX2000/decode/rescore.mlf \
-  grph-plp-bg/dev03_DEV001-20010117-XX2000/decode/rescore.mlf \
-  --outfile score-comb.mlf
-python3.4 ROVER.py score-comb.mlf --outfile score-comb-ROVER.mlf
+sysCombPath=grph-plp-syscomb/dev03_DEV001-20010117-XX2000/decode/
+#mkdir -p $sysCombPath
+#python3.4 align-mlf.py \
+#  plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/rescore.mlf \
+#  grph-plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/rescore.mlf \
+#  --outfile $sysCombPath/aligned.mlf \
+#  --NULLSCORE 0.2
+#python3.4 ROVER.py grph-plp-syscomb/dev03_DEV001-20010117-XX2000/decode/aligned.mlf \
+#  --outfile $sysCombPath/rescore.mlf
+
+#mv $sysCombPath/rescore.mlf $sysCombPath/rescore-orig.mlf
+#base/conftools/smoothtree-mlf.pl \
+#  lib/trees/grph-plp-bg_decode_cn.tree \
+#  $sysCombPath/rescore-orig.mlf > $sysCombPath/rescore.mlf
+#./scripts/score.sh grph-plp-syscomb dev03sub decode
 
 # What is the performance of the system? How does it change with
-# the !NULL confidence score. Discuss any issues with this form of combination.
+# the !NULL confidence score.
+# !NULL = 0.0
+# | Sum/Avg                    |   94    5023 | 88.6    9.3    2.2    4.3   15.8   91.5 |  0.291 |
+# !NULL = 0.2
+# | Sum/Avg                    |   94    5023 | 88.6    9.3    2.2    4.3   15.8   91.5 |  0.291 |
+# !NULL = 0.5
+# | Sum/Avg                    |   94    5023 | 88.4    9.2    2.3    3.9   15.5   91.5 |  0.282 |
+# !NULL = 0.7
+# | Sum/Avg                    |   94    5023 | 88.2    8.9    2.9    3.2   15.0   91.5 |  0.264 |
+# !NULL = 0.75, unmapped confidences
+# | Sum/Avg                    |   94    5023 | 88.2    8.9    3.0    3.0   14.9   89.4 | -0.038 |
+# !NULL = 0.8
+# | Sum/Avg                    |   94    5023 | 88.1    8.9    3.1    2.9   14.9   89.4 | -0.041 |
+# !NULL = 0.9
+# | Sum/Avg                    |   94    5023 | 87.9    8.9    3.2    2.5   14.6   88.3 | -0.043 |
+# !NULL = 1.0
+# | Sum/Avg                    |   94    5023 | 87.6    8.7    3.7    2.2   14.6   87.2 | -0.029 |
+
+# Discuss any issues with this form of combination.
 # If you want to use mapped confidence scores for combination you can use the
 # following perl script
-# base/conftools/smoothtree-mlf.pl lib/trees/grph-plp-bg_decode_cn.tree grph-plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/rescore.mlf
 # This maps the confidence scores for the MLF, which can then be ”piped” into
 # a file for scoring/combination.
 

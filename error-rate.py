@@ -108,7 +108,7 @@ def parse_mlf(mlf):
             entries.append(entry)
             entry = dict()
         elif line[0] == '"':
-            name = "*/" + line.strip().split('/')[-1]
+            name = "\"*/" + line.strip().split('/')[-1]
             entry["name"] = name
             entry["transcript"] = []
         else:

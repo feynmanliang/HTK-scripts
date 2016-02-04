@@ -39,8 +39,8 @@ def parse_mlf(mlf):
         if ".\n" in line:
             entries.append(entry)
             entry = dict()
-        elif line[0] == '*':
-            name = "*/" + line.strip().split('/')[-1]
+        elif line[0] == '"':
+            name = "\"*/" + line.strip().split('/')[-1]
             entry["name"] = name
             entry["transcript"] = []
         else:

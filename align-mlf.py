@@ -3,25 +3,22 @@ from collections import defaultdict
 from copy import deepcopy
 from math import log
 
-INSPROB = log(0.20)
-DELPROB = log(0.20)
-
 INSSCORE = 7
 SUBSCORE = 10
 
-def main(ref_mlf, other_mlfs):
+def main(NULLSCORE, ref_mlf, other_mlfs):
     with open(ref_mlf) as ref:
         curr = parse_mlf(ref)
         for other_mlf in other_mlfs:
             with open(other_mlf) as other:
-                curr_mlf = merge_mlf(curr, parse_mlf(other))
+                curr_mlf = merge_mlf(NULLSCORE, curr, parse_mlf(other))
     return curr_mlf
 
-def merge_mlf(ref, other):
+def merge_mlf(NULLSCORE, ref, other):
     # TODO: check that filenames match
     new_mlf = []
     for f1, f2 in zip(ref, other):
-        (path, _) = best_align(f1['transcript'], f2['transcript'])
+        (path, _) = best_align(NULLSCORE, f1['transcript'], f2['transcript'])
         f1['transcript'] = path
         new_mlf.append(f1)
     return new_mlf
@@ -46,9 +43,9 @@ def mlf_to_string(mlf):
         res += "\n.\n"
     return res
 
-def best_align(ref, other):
+def best_align(NULLSCORE, ref, other):
     (A, B) = DP(ref, other)
-    (path, stats) = backtrack(A, B)
+    (path, stats) = backtrack(NULLSCORE, A, B)
     return (path, stats)
 
 def DP(ref, other):
@@ -86,7 +83,7 @@ def DP(ref, other):
             A[i][j] = bestAction[1]
     return (A, B)
 
-def backtrack(A, B):
+def backtrack(NULLSCORE, A, B):
     """
     Backtracks DP actions to return alignment and result statistics.
     """
@@ -99,7 +96,7 @@ def backtrack(A, B):
         if B[i][j][0] == 'DEL':
             entry = B[i][j][1]
             entry['word'].append('<DEL>')
-            entry['logProb'].append(DELPROB)
+            entry['logProb'].append(NULLSCORE)
             path.append(entry)
             stats['N'] += 1
             stats['NUM_DEL'] += 1
@@ -107,7 +104,7 @@ def backtrack(A, B):
         elif B[i][j][0] == 'INS':
             entry = B[i][j][1]
             entry['word'] = ['!NULL'] + entry['word']
-            entry['logProb'] = [INSPROB] + entry['logProb']
+            entry['logProb'] = [NULLSCORE] + entry['logProb']
             path.append(entry)
             stats['NUM_INS'] += 1
             j -= 1
@@ -141,7 +138,7 @@ def parse_mlf(mlf):
             entries.append(entry)
             entry = dict()
         elif line[0] == '"':
-            name = "*/" + line.strip().split('/')[-1]
+            name = "\"*/" + line.strip().split('/')[-1]
             entry["name"] = name
             entry["transcript"] = []
         else:
@@ -161,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('ref_mlf', type=str)
     parser.add_argument('other_mlfs', nargs="+", type=str)
     parser.add_argument('--outfile', type=str)
+    parser.add_argument('--NULLSCORE', default=0.2, required=False, type=float)
     args = parser.parse_args()
     with open(args.outfile, 'w') as out:
-        out.write(mlf_to_string(main(args.ref_mlf, args.other_mlfs)))
+        out.write(mlf_to_string(main(args.NULLSCORE, args.ref_mlf, args.other_mlfs)))
