@@ -1,35 +1,53 @@
 #!/usr/bin/python
 from collections import defaultdict
+from copy import deepcopy
+
+INSPROB = 0.20
+DELPROB = 0.20
+
 INSSCORE = 7
 SUBSCORE = 10
 
-def main(ref_mlf, other_mlf):
+def main(ref_mlf, other_mlfs):
     with open(ref_mlf) as ref:
-        with open(other_mlf) as other:
-            return error_rate(ref, other)
+        curr = parse_mlf(ref)
+        for other_mlf in other_mlfs:
+            with open(other_mlf) as other:
+                curr_mlf = merge_mlf(curr, parse_mlf(other))
+    return mlf_to_string(curr_mlf)
 
-def error_rate(ref, other):
-    ref_mlf = parse_mlf(ref)
-    other_mlf = parse_mlf(other)
-    num_incorr = 0
-    num_err = 0
-    num_words = 0
-    for f1, f2 in zip(ref_mlf, other_mlf):
-        stats = best_align(f1['transcript'], f2['transcript'])
-        num_incorr += stats['NUM_DEL'] + stats['NUM_SUB']
-        num_err += stats['NUM_INS'] + stats['NUM_DEL'] + stats['NUM_SUB']
-        num_words += stats['N']
-    correct = 1. - num_incorr / num_words
-    accuracy = 1. - num_err / num_words
-    return (correct, accuracy)
+def merge_mlf(ref, other):
+    # TODO: check that filenames match
+    new_mlf = []
+    for f1, f2 in zip(ref, other):
+        (path, _) = best_align(f1['transcript'], f2['transcript'])
+        f1['transcript'] = path
+        new_mlf.append(f1)
+    return new_mlf
+
+def mlf_to_string(mlf):
+    """
+    TODO
+    """
+    res = ''
+    def format_entry(entry):
+        wordString = entry['word'][0]
+        scoreString = '_'.join(map(lambda x: '{:0.2f}'.format(x), entry['logProb']))
+        if len(entry['word']) > 1:
+                wordString += '_<ALTSTART>_' \
+                        + '_<ALTEND>_<ALTSTART>_'.join(entry['word'][1:]) \
+                        + '_<ALTEND>'
+        return '{0} {1} {2} {3}'.format(entry['start'], entry['end'], wordString, scoreString)
+    res += "#!MLF!#\n"
+    for entry in mlf:
+        res += entry['name'] + '\n'
+        res += '\n'.join(map(format_entry, entry['transcript']))
+    return res
 
 def best_align(ref, other):
-    """
-    Computes the number of errors in the best alignment between `ref` and `other`.
-    """
     (A, B) = DP(ref, other)
-    (_, stats) = backtrack(A, B)
-    return stats
+    (path, stats) = backtrack(A, B)
+    return (path, stats)
 
 def DP(ref, other):
     """
@@ -48,19 +66,19 @@ def DP(ref, other):
     B[0][0] = ('START', '')
     for i in range(1,len(ref)+1):
         A[i][0] = i*INSSCORE
-        B[i][0] = ('INS_REF', ref[i-1]['word'])
+        B[i][0] = ('DEL', ref[i-1]['word'])
     for j in range(1,len(other)+1):
         A[0][j] = j*INSSCORE
-        B[0][j] = ('INS_OTHER', other[j-1]['word'])
+        B[0][j] = ('INS', other[j-1]['word'])
     for i in range(1,len(ref)+1):
         for j in range(1,len(other)+1):
             actions = [
-                    (('INS_REF', (ref[i-1]['word'], '!NULL')), A[i-1][j]+INSSCORE), # insertion in ref
-                    (('INS_OTHER', ('!NULL', other[j-1]['word'])), A[i][j-1]+INSSCORE), # insertion in other
-                    (('SUB', (ref[i-1]['word'], other[j-1]['word'])), A[i-1][j-1]+SUBSCORE) # substitution
+                    (('DEL', ref[i-1]), A[i-1][j]+INSSCORE), # insertion in ref
+                    (('INS', other[j-1]), A[i][j-1]+INSSCORE), # insertion in other
+                    (('SUB', ref[i-1], other[j-1]), A[i-1][j-1]+SUBSCORE) # substitution
                     ]
             if ref[i-1]['word'] == other[j-1]['word']:
-                actions.append((('MATCH', ref[i-1]['word']), A[i-1][j-1]))
+                actions.append((('MATCH', ref[i-1]), A[i-1][j-1]))
             bestAction = min(actions, key=lambda x: x[1])
             B[i][j] = bestAction[0]
             A[i][j] = bestAction[1]
@@ -76,20 +94,32 @@ def backtrack(A, B):
     i = len(B)-1
     j = len(B[0])-1
     while B[i][j][0] != 'START':
-        path.append(B[i][j][1])
-        if B[i][j][0] == 'INS_REF':
+        if B[i][j][0] == 'DEL':
+            entry = B[i][j][1]
+            entry['word'].append('<DEL>')
+            entry['logProb'].append(DELPROB)
+            path.append(entry)
             stats['N'] += 1
             stats['NUM_DEL'] += 1
             i -= 1
-        elif B[i][j][0] == 'INS_OTHER':
+        elif B[i][j][0] == 'INS':
+            entry = B[i][j][1]
+            entry['word'] = ['!NULL'] + entry['word']
+            path.append(entry)
             stats['NUM_INS'] += 1
             j -= 1
         elif B[i][j][0] == 'SUB':
+            entry = B[i][j][1]
+            entry['word'].extend(B[i][j][2]['word'])
+            entry['logProb'].extend(B[i][j][2]['logProb'])
+            path.append(entry)
             stats['N'] += 1
             stats['NUM_SUB'] += 1
             i -= 1
             j -= 1
         elif B[i][j][0] == 'MATCH':
+            entry = B[i][j][1]
+            path.append(entry)
             stats['N'] += 1
             stats['H'] += 1
             i -= 1
@@ -116,8 +146,8 @@ def parse_mlf(mlf):
             entry["transcript"].append({
                 'start': int(line[0]),
                 'end': int(line[1]),
-                'word': line[2],
-                'logProb': float(line[3]),
+                'word': [line[2]],
+                'logProb': [float(line[3])],
                 })
     return entries
 
@@ -126,6 +156,6 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Compute Error Rate Between two MLFs')
     parser.add_argument('ref_mlf', type=str)
-    parser.add_argument('other_mlf', type=str)
+    parser.add_argument('other_mlfs', nargs="+", type=str)
     args = parser.parse_args()
-    print(main(args.ref_mlf, args.other_mlf))
+    print(main(args.ref_mlf, args.other_mlfs))
