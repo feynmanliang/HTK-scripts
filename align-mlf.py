@@ -1,9 +1,10 @@
 #!/usr/bin/python
 from collections import defaultdict
 from copy import deepcopy
+from math import log
 
-INSPROB = 0.20
-DELPROB = 0.20
+INSPROB = log(0.20)
+DELPROB = log(0.20)
 
 INSSCORE = 7
 SUBSCORE = 10
@@ -14,7 +15,7 @@ def main(ref_mlf, other_mlfs):
         for other_mlf in other_mlfs:
             with open(other_mlf) as other:
                 curr_mlf = merge_mlf(curr, parse_mlf(other))
-    return mlf_to_string(curr_mlf)
+    return curr_mlf
 
 def merge_mlf(ref, other):
     # TODO: check that filenames match
@@ -42,6 +43,7 @@ def mlf_to_string(mlf):
     for entry in mlf:
         res += entry['name'] + '\n'
         res += '\n'.join(map(format_entry, entry['transcript']))
+        res += "\n.\n"
     return res
 
 def best_align(ref, other):
@@ -66,10 +68,10 @@ def DP(ref, other):
     B[0][0] = ('START', '')
     for i in range(1,len(ref)+1):
         A[i][0] = i*INSSCORE
-        B[i][0] = ('DEL', ref[i-1]['word'])
+        B[i][0] = ('DEL', ref[i-1])
     for j in range(1,len(other)+1):
         A[0][j] = j*INSSCORE
-        B[0][j] = ('INS', other[j-1]['word'])
+        B[0][j] = ('INS', other[j-1])
     for i in range(1,len(ref)+1):
         for j in range(1,len(other)+1):
             actions = [
@@ -105,6 +107,7 @@ def backtrack(A, B):
         elif B[i][j][0] == 'INS':
             entry = B[i][j][1]
             entry['word'] = ['!NULL'] + entry['word']
+            entry['logProb'] = [INSPROB] + entry['logProb']
             path.append(entry)
             stats['NUM_INS'] += 1
             j -= 1
@@ -154,8 +157,10 @@ def parse_mlf(mlf):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Compute Error Rate Between two MLFs')
+    parser = argparse.ArgumentParser(description='Align multiple MLFs for oracle decoding/ROVER')
     parser.add_argument('ref_mlf', type=str)
     parser.add_argument('other_mlfs', nargs="+", type=str)
+    parser.add_argument('--outfile', type=str)
     args = parser.parse_args()
-    print(main(args.ref_mlf, args.other_mlfs))
+    with open(args.outfile, 'w') as out:
+        out.write(mlf_to_string(main(args.ref_mlf, args.other_mlfs)))
