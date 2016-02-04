@@ -85,3 +85,4 @@ lm_dev03_global="lm_dev03_global"
 #done
 # ./scripts/score.sh plp-tg-unsup-lm-adapt eval03 rescore
 # | Sum/Avg                    |  508   24935 | 85.2   10.9    3.9    2.0   16.8   84.4 | -0.763 |
+# # TODO: what's going on, why is this so bad

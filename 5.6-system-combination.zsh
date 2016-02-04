@@ -120,6 +120,10 @@ sysCombPath=grph-plp-syscomb/dev03_DEV001-20010117-XX2000/decode/
 # style combination to support CNC. You will need to consider distance measures
 # for aligning confusion networks together, as well as how you want to generate
 # the final output.
+python3.4 cnc-combination.py \
+  plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/ \
+  grph-plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/
+
 
 
 # Check the performance of the combination schemes on the whole of the dev03
