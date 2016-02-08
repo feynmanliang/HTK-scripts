@@ -1,0 +1,12 @@
+LPlex test #0: 3-gram
+perplexity 151.5218, var 10.1259, utterances 508, words predicted 25672
+num tokens 26300, OOV 120, OOV rate 0.47% (excl. </s>)
+
+Access statistics for lm_dev03_global:
+Lang model  requested  exact backed    n/a     mean    stdev
+    bigram      12585  84.5%  15.5%   0.0%    -6.46     3.20
+   trigram      25672  51.0%  32.5%  16.5%    -5.02     3.18
+# dev03
+| Sum/Avg                    |  572   25571 | 85.6   10.6    3.8    2.3   16.8   79.9 | -0.768 |
+# eval03
+| Sum/Avg                    |  508   24938 | 87.0    9.7    3.3    2.0   15.0   84.3 | -0.886 |
