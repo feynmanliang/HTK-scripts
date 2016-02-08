@@ -5,13 +5,16 @@ import subprocess
 def estimate_interpolated_lm(lm_paths, text_data_path, output_lm_path):
     # evaluate lms and collect word conditionals
     lm_word_probs = {}
+    N_words = 0
     for lm in lm_paths:
         subprocess.call("base/bin/LPlex -C lib/cfgs/hlm.cfg -s stream -u -t {0} {1}".format(lm, text_data_path).split(" "))
         with open('stream') as f:
             lm_word_probs[lm] = list(map(float, f))
+            N_words = len(lm_word_probs[lm])
 
     # random initi interpolation weights
-    interp_weights = [random.uniform(.1, 1) for _ in lm_paths]
+    # interp_weights = [random.uniform(.1, 1) for _ in lm_paths]
+    interp_weights = [0.2 for _ in lm_paths]
     Z = sum(interp_weights)
     interp_weights = list(map(lambda x: x / Z, interp_weights))
     interp_weights = dict(zip(lm_paths, interp_weights))
@@ -23,11 +26,11 @@ def estimate_interpolated_lm(lm_paths, text_data_path, output_lm_path):
         print(interp_weights)
 
         # update interp weights
-        denom = [sum(map(lambda lm: interp_weights[lm] * lm_word_probs[lm][i], lm_word_probs)) for i in range(len(lm_word_probs))]
-        Kp1 = len(lm_word_probs)
+        denom = [sum([interp_weights[lm] * lm_word_probs[lm][w] for lm in interp_weights])
+                for w in range(N_words)]
         for lm in interp_weights:
-            interp_weights[lm] = (1. / Kp1) \
-                    * sum(map(lambda x: interp_weights[lm] * x[0] / x[1], zip(lm_word_probs[lm], denom)))
+            interp_weights[lm] = (1. / N_words) \
+                    * sum([(interp_weights[lm] * lm_word_probs[lm][w]) / denom[w] for w in range(len(lm_word_probs[lm]))])
 
 
     print(interp_weights)
