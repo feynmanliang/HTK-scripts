@@ -80,12 +80,11 @@ sysCombPath=grph-plp-syscomb/dev03_DEV001-20010117-XX2000/decode/
 #  --outfile $sysCombPath/aligned.mlf \
 #  --NULLSCORE 0.2
 #python3.4 ROVER.py grph-plp-syscomb/dev03_DEV001-20010117-XX2000/decode/aligned.mlf \
-#  --outfile $sysCombPath/rescore.mlf
+#  --outfile $sysCombPath/rescore-ROVER.mlf
 
-#mv $sysCombPath/rescore.mlf $sysCombPath/rescore-orig.mlf
 #base/conftools/smoothtree-mlf.pl \
 #  lib/trees/grph-plp-bg_decode_cn.tree \
-#  $sysCombPath/rescore-orig.mlf > $sysCombPath/rescore.mlf
+#  $sysCombPath/rescore-ROVER.mlf > $sysCombPath/rescore.mlf
 #./scripts/score.sh grph-plp-syscomb dev03sub decode
 
 # What is the performance of the system? How does it change with
@@ -120,14 +119,28 @@ sysCombPath=grph-plp-syscomb/dev03_DEV001-20010117-XX2000/decode/
 # style combination to support CNC. You will need to consider distance measures
 # for aligning confusion networks together, as well as how you want to generate
 # the final output.
-#
+
+mv $sysCombPath/rescore.mlf $sysCombPath/rescore-ROVER-smooth.mlf
+
+
 #python3.4 cnc-combination.py \
   #plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/ \
   #plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/
 
-python3.4 cnc-combination.py \
+#python3.4 cnc-combination.py \
+#  plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/ \
+#  grph-plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/
+
+python3.4 cnc-2.py \
   plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/ \
-  grph-plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/
+  grph-plp-bg/dev03_DEV001-20010117-XX2000/decode_cn/lattices/ \
+  > $sysCombPath/rescore-CNC.mlf
+
+base/conftools/smoothtree-mlf.pl \
+  lib/trees/grph-plp-bg_decode_cn.tree \
+  $sysCombPath/rescore-CNC.mlf > $sysCombPath/rescore.mlf
+./scripts/score.sh grph-plp-syscomb dev03sub decode
+# | Sum/Avg                    |   94    5023 | 85.0   10.6    4.4    4.7   19.7   95.7 | -2.637 |
 
 
 # Check the performance of the combination schemes on the whole of the dev03
